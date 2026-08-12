@@ -22,7 +22,7 @@ function connect() {
     }
 
     navigator.bluetooth.requestDevice({
-        filters: [{name: deviceName}],
+        acceptAllDevices: true,
         optionalServices: [serviceUuid]
     })
     .then(device => {
@@ -35,13 +35,15 @@ function connect() {
         console.log("Connected to GATT Server");
         bleServer = gattServer;
 
-        return bleServer.getPrimaryService(bleService);
+        connected = true;
+        requestAnimationFrame(updateState);
+
+        return getServiceWithRetry(gattServer, serviceUuid);
     })
     .then(service => {
         console.log("Service discovered: " + service.uuid);
         serviceFound = service;
 
-        connected = true;
         return service.getCharacteristic(testUuid);
     })
     .then(characteristic => {
@@ -60,8 +62,6 @@ function connect() {
     .catch(error => {
         console.log("Error: " + error);
     })
-
-    requestAnimationFrame(updateState);
 }
 
 function disconnect() {
@@ -75,7 +75,7 @@ function disconnect() {
         return;
     }
 
-    sensorCharacteristicFound.stopNotifications().then(() => {
+    characteristicFound.stopNotifications().then(() => {
         console.log("Notifications stopped");
         return bleServer.disconnect();
     })
@@ -88,9 +88,18 @@ function disconnect() {
     });
 }
 
+function getServiceWithRetry(gattServer, uuid, attempts = 10, delayMs = 1000) {
+    return gattServer.getPrimaryService(uuid).catch(error => {
+        if (attempts <= 1) throw error;
+
+        return new Promise(resolve => setTimeout(resolve, delayMs))
+            .then(() => getServiceWithRetry(gattServer, uuid, attempts - 1, delayMs));
+    });
+}
+
 // Event handlers
 function onDisconnected(e) {
-    console.log("Device disconnected: " + e.target.device.name);
+    console.log("Device disconnected");
     connected = false;
 }
 
