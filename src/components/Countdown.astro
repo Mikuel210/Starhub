@@ -6,8 +6,11 @@ import { Icon } from 'astro-icon/components'
     <button id="button-countdown-config">
         <Icon name="mdi:cog-outline" />
     </button>
+
     <h2 id="h2-mission">Mission Name</h2>
     <h2 id="h2-countdown">T-00:00:00</h2>
+    <p id="p-milliseconds">000</p>
+
     <div id="div-countdown-buttons">
         <button id="button-start-abort">START</button>
         <button id="button-hold-resume">HOLD </button>
@@ -57,20 +60,28 @@ import { Icon } from 'astro-icon/components'
 
         > #h2-countdown {
             margin: 0;
-            margin-bottom: 15px;
             padding: 0;
             font-size: 70px;
             line-height: 70px;
         }
 
-        > #div-countdown-buttons button {
-            margin: 5px;
-            padding: 7px;
-            font-size: 20px;
-            width: 100px;
-            border: none;
-            border-radius: 20px;
-            background-color: white;
+        > #p-milliseconds {
+            margin: 0;
+            font-size: 30px;
+        }
+
+        > #div-countdown-buttons {
+            margin-top: 15px;
+
+            button {
+                margin: 5px;
+                padding: 7px;
+                font-size: 20px;
+                width: 100px;
+                border: none;
+                border-radius: 20px;
+                background-color: white;
+            }
         }
     }
 </style>
