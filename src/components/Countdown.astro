@@ -1,6 +1,13 @@
+---
+import { Icon } from 'astro-icon/components'
+---
+
 <div id="div-countdown">
-    <h2 id="h2-mission">Starkit Test Flight</h2>
-    <h2 id="h2-countdown">T-10:00:00</h2>
+    <button id="button-countdown-config">
+        <Icon name="mdi:cog-outline" />
+    </button>
+    <h2 id="h2-mission">Mission Name</h2>
+    <h2 id="h2-countdown">T-00:00:00</h2>
     <div id="div-countdown-buttons">
         <button id="button-start-abort">START</button>
         <button id="button-hold-resume">HOLD </button>
@@ -8,7 +15,12 @@
 </div>
 
 <style>
+    button:hover {
+        cursor: pointer;
+    }
+
     #div-countdown {
+        position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -22,6 +34,22 @@
         margin-top: 30px;
         padding: 30px;
 
+        > #button-countdown-config {
+            display: block;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            border: none;
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+
+            > [data-icon] {
+                font-size: 30px;
+                color: white;
+            }
+        }
+
         > #h2-mission {
             margin: 0;
             padding: 0;
@@ -29,13 +57,15 @@
 
         > #h2-countdown {
             margin: 0;
+            margin-bottom: 15px;
             padding: 0;
-            font-size: 50px;
+            font-size: 70px;
+            line-height: 70px;
         }
 
-        button {
+        > #div-countdown-buttons button {
             margin: 5px;
-            padding: 10px;
+            padding: 7px;
             font-size: 20px;
             width: 100px;
             border: none;
