@@ -9,9 +9,13 @@ configButton.addEventListener("click", () => {
     const minutesString = prompt("Countdown Minutes");
     minutes = parseInt(minutesString);
 
-    if (isNaN(minutes))
-    {
+    if (isNaN(minutes)) {
         alert("Invalid minutes");
+        return;
+    }
+
+    if (minutes > 59 || minutes < 1) {
+        alert("Minutes must be greater than 0 and lower than 60");
         return;
     }
 
@@ -30,17 +34,22 @@ let hold = false;
 
 var startTime;        // Set on start and resume
 var liftoffTime;      // Calculated by updateCountdown
+
 var minutes = 0;      // Set on start and hold
 var seconds = 0;      // Set on hold
 var milliseconds = 0; // Set on hold
 
 function getT() {
     liftoffTime = new Date(startTime + minutes * 60_000 + seconds * 1_000 + milliseconds);
+    let t;
 
     if (Date.now() > liftoffTime)
-        return new Date(Date.now() - liftoffTime);
+        t = new Date(Date.now() - liftoffTime);
     else
-        return new Date(liftoffTime - Date.now());
+        t = new Date(liftoffTime - Date.now());
+
+    t.setHours(0);
+    return t;
 }
 
 function updateCountdown() {
@@ -56,7 +65,8 @@ function updateCountdown() {
     // Set countdown for not started or hold
     if (!started || (started && hold))
     {
-        t = new Date(0)
+        t = new Date(0);
+        t.setHours(0);
         t.setMinutes(minutes);
         t.setSeconds(seconds);
         t.setMilliseconds(milliseconds);
@@ -116,6 +126,7 @@ function updateButtons() {
     if (!configured) {
         startAbortButton.innerHTML = "START";
         startAbortButton.style.backgroundColor = "silver";
+        startAbortButton.style.color = '';
         startAbortButton.disabled = true;
 
         holdResumeButton.innerHTML = "HOLD";
@@ -134,6 +145,7 @@ function updateButtons() {
     if (started) {
         startAbortButton.innerHTML = "ABORT";
         startAbortButton.style.backgroundColor = "indianred";
+        startAbortButton.style.color = "white";
 
         if (hold) {
             holdResumeButton.innerHTML = "RESUME";
@@ -144,7 +156,8 @@ function updateButtons() {
         }
     } else {
         startAbortButton.innerHTML = "START";
-        startAbortButton.style.backgroundColor = "limegreen";
+        startAbortButton.style.backgroundColor = "forestgreen";
+        startAbortButton.style.color = "white";
 
         holdResumeButton.innerHTML = "HOLD";
         holdResumeButton.style.backgroundColor = "silver";
