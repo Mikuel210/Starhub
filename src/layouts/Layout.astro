@@ -18,7 +18,7 @@ import { Font } from "astro:assets";
 	</body>
 </html>
 
-<style>
+<style is:global>
 	html,
 	body {
 		margin: 0;
@@ -29,4 +29,27 @@ import { Font } from "astro:assets";
         font-family: var(--font-main);
         overflow-x: hidden;
 	}
+
+    section {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid white;
+        border-radius: 20px;
+        max-width: 90dvw;
+        padding: 30px;
+    }
+
+    button {
+        margin: 5px;
+        padding: 7px;
+        font-size: 20px;
+        border: none;
+        border-radius: 20px;
+        background-color: white;
+    }
+
+    button:hover {
+        cursor: pointer;
+    }
 </style>

@@ -2,7 +2,7 @@
 import { Icon } from 'astro-icon/components'
 ---
 
-<div id="div-countdown">
+<section id="section-countdown">
     <button id="button-countdown-config">
         <Icon name="mdi:cog-outline" />
     </button>
@@ -15,27 +15,16 @@ import { Icon } from 'astro-icon/components'
         <button id="button-start-abort">START</button>
         <button id="button-hold-resume">HOLD </button>
     </div>
-</div>
+</section>
 
 <style>
-    button:hover {
-        cursor: pointer;
-    }
-
-    #div-countdown {
-        position: relative;
-        display: flex;
-        flex-direction: column;
+    #section-countdown {
         align-items: center;
         justify-content: center;
-        border: 1px solid white;
-        border-radius: 20px;
         width: 600px;
-        max-width: 90dvw;
         margin-left: auto;
         margin-right: auto;
         margin-top: 30px;
-        padding: 30px;
 
         > #button-countdown-config {
             display: block;
@@ -74,13 +63,7 @@ import { Icon } from 'astro-icon/components'
             margin-top: 15px;
 
             button {
-                margin: 5px;
-                padding: 7px;
-                font-size: 20px;
                 width: 100px;
-                border: none;
-                border-radius: 20px;
-                background-color: white;
             }
         }
     }
