@@ -44,7 +44,13 @@ function getT() {
 }
 
 function updateCountdown() {
-    if (!configured) return;
+    if (!configured) {
+        countdownH2.innerHTML = "T-00:00:00";
+        millisecondsP.innerHTML = "000";
+
+        return;
+    }
+
     let t = getT();
 
     // Set countdown for not started or hold
@@ -74,6 +80,16 @@ startAbortButton.addEventListener("click", () => {
     if (!started) {
         started = true;
         startTime = Date.now();
+    } else {
+        started = false;
+        hold = false;
+        configured = false;
+
+        minutes = 0;
+        seconds = 0;
+        milliseconds = 0;
+
+        missionH2.innerHTML = "Mission Name";
     }
 
     updateButtons();
@@ -106,10 +122,13 @@ function updateButtons() {
         holdResumeButton.style.backgroundColor = "silver";
         holdResumeButton.disabled = true;
 
+        configButton.disabled = false;
+
         return;
     } else {
         startAbortButton.disabled = false;
         holdResumeButton.disabled = false;
+        configButton.disabled = true;
     }
 
     if (started) {
