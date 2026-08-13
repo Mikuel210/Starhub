@@ -1,3 +1,5 @@
+import { connected } from "./connection.js"
+
 // Countdown configuration
 const configButton = document.getElementById("button-countdown-config");
 const missionH2 = document.getElementById("h2-mission");
@@ -101,8 +103,6 @@ startAbortButton.addEventListener("click", () => {
 
         missionH2.innerHTML = "Mission Name";
     }
-
-    updateButtons();
 });
 
 holdResumeButton.addEventListener("click", () => {
@@ -118,51 +118,60 @@ holdResumeButton.addEventListener("click", () => {
         seconds = t.getSeconds();
         milliseconds = t.getMilliseconds();
     }
-
-    updateButtons();
 });
 
 function updateButtons() {
-    if (!configured) {
+    // Start / Abort
+    if (!configured || !connected)
+    {
         startAbortButton.innerHTML = "START";
         startAbortButton.style.backgroundColor = "silver";
         startAbortButton.style.color = '';
         startAbortButton.disabled = true;
-
-        holdResumeButton.innerHTML = "HOLD";
-        holdResumeButton.style.backgroundColor = "silver";
-        holdResumeButton.disabled = true;
-
-        configButton.disabled = false;
-
-        return;
-    } else {
-        startAbortButton.disabled = false;
-        holdResumeButton.disabled = false;
-        configButton.disabled = true;
-    }
-
-    if (started) {
+    } else if (started) {
         startAbortButton.innerHTML = "ABORT";
         startAbortButton.style.backgroundColor = "indianred";
         startAbortButton.style.color = "white";
-
-        if (hold) {
-            holdResumeButton.innerHTML = "RESUME";
-            holdResumeButton.style.backgroundColor = "skyblue";
-        } else {
-            holdResumeButton.innerHTML = "HOLD";
-            holdResumeButton.style.backgroundColor = "gold";
-        }
+        startAbortButton.disabled = false;
     } else {
         startAbortButton.innerHTML = "START";
         startAbortButton.style.backgroundColor = "forestgreen";
         startAbortButton.style.color = "white";
+        startAbortButton.disabled = false;
+    }
 
+    // Hold / Resume
+    const canHold = Date.now() < liftoffTime && getT().getMinutes() >= 1;
+
+    if (!configured || !canHold) {
+        holdResumeButton.innerHTML = "HOLD";
+        holdResumeButton.style.backgroundColor = "silver";
+        holdResumeButton.disabled = true;
+    } else if (started && hold) {
+        holdResumeButton.innerHTML = "RESUME";
+        holdResumeButton.style.backgroundColor = "skyblue";
+        holdResumeButton.disabled = false;
+    } else if (started && !hold) {
+        holdResumeButton.innerHTML = "HOLD";
+        holdResumeButton.style.backgroundColor = "gold";
+        holdResumeButton.disabled = false;
+    } else {
         holdResumeButton.innerHTML = "HOLD";
         holdResumeButton.style.backgroundColor = "silver";
         holdResumeButton.disabled = true;
     }
+
+    // Configure
+    if (!configured) {
+        configButton.disabled = false;
+    } else {
+        configButton.disabled = true;
+    }
+
+    requestAnimationFrame(updateButtons);
 }
 
-updateButtons();
+requestAnimationFrame(updateButtons);
+
+// Exports
+export { started }

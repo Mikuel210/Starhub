@@ -1,3 +1,5 @@
+import { started } from "./countdown.js"
+
 // Manage connection
 const deviceName = "ESP32";
 const serviceUuid = "3343f2ee-4910-492a-b29b-181e051a631b";
@@ -35,9 +37,6 @@ function connect() {
         console.log("Connected to GATT Server");
         bleServer = gattServer;
 
-        connected = true;
-        requestAnimationFrame(updateState);
-
         return getServiceWithRetry(gattServer, serviceUuid);
     })
     .then(service => {
@@ -51,6 +50,9 @@ function connect() {
         characteristicFound = characteristic;
         characteristic.addEventListener('characteristicvaluechanged', onCharacteristicChange);
         characteristic.startNotifications();
+
+        connected = true;
+        requestAnimationFrame(updateState);
 
         return characteristic.readValue();
     })
@@ -124,7 +126,7 @@ function write(value) {
     });
 }
 
-// Update state
+// Update state and buttons
 function updateState() {
     if (connected) {
         stateSpan.innerHTML = "CONNECTED";
@@ -137,4 +139,15 @@ function updateState() {
     }
 }
 
+function updateButtons() {
+    connectButton.disabled = started;
+    disconnectButton.disabled = started;
+
+    requestAnimationFrame(updateButtons);
+}
+
 requestAnimationFrame(updateState);
+requestAnimationFrame(updateButtons);
+
+// Exports
+export { connected }
