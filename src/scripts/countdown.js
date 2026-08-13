@@ -9,23 +9,23 @@ const millisecondsP = document.getElementById("p-milliseconds")
 configButton.addEventListener("click", () => {
     const missionName = prompt("Mission Name");
     const minutesString = prompt("Countdown Minutes");
-    minutes = parseInt(minutesString);
+    const minutes = parseInt(minutesString);
 
     if (isNaN(minutes)) {
         alert("Invalid minutes");
         return;
     }
 
-    if (minutes > 59 || minutes < 1) {
-        alert("Minutes must be greater than 0 and lower than 60");
+    if (minutes < 1) {
+        alert("Minutes must be greater than 0");
         return;
     }
 
+    milliseconds = minutes * 60_000;
     configured = true;
     startTime = Date.now();
-    requestAnimationFrame(updateCountdown);
-    requestAnimationFrame(updateButtons);
 
+    requestAnimationFrame(updateCountdown);
     missionH2.innerHTML = missionName;
 });
 
@@ -34,50 +34,42 @@ var configured = false;
 let started = false;
 let hold = false;
 
-var startTime;        // Set on start and resume
-var liftoffTime;      // Calculated by updateCountdown
-
-var minutes = 0;      // Set on start and hold
-var seconds = 0;      // Set on hold
-var milliseconds = 0; // Set on hold
+var startTime;    // Set on start and resume
+var milliseconds; // Set on start and hold
 
 function getT() {
-    liftoffTime = new Date(startTime + minutes * 60_000 + seconds * 1_000 + milliseconds);
-    let t;
+    if (!configured)
+        return 0;
 
-    if (Date.now() > liftoffTime)
-        t = new Date(Date.now() - liftoffTime);
-    else
-        t = new Date(liftoffTime - Date.now());
+    if (!started || (started && hold))
+        return -milliseconds;
 
-    t.setHours(0);
-    return t;
+    const liftoffTime = new Date(startTime + milliseconds);
+    return new Date(Date.now()).getTime() - liftoffTime.getTime();
+}
+
+function pad(number, length = 2) {
+    return String(number).padStart(length, '0');
+}
+
+function formatCountdown() {
+    const t = getT();
+    const abs = Math.abs(t);
+
+    const prefix = t > 0 ? "T+" : "T-";
+    const hours = Math.floor(abs / 3_600_000);
+    const minutes = Math.floor(abs / 60_000 % 60);
+    const seconds = Math.floor(abs / 1_000 % 60);
+
+    const clock = `${prefix}${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    const ms = pad(abs % 1000, 3);
+    return { clock, ms };
 }
 
 function updateCountdown() {
-    if (!configured) {
-        countdownH2.innerHTML = "T-00:00:00";
-        millisecondsP.innerHTML = "000";
-
-        return;
-    }
-
-    let t = getT();
-
-    // Set countdown for not started or hold
-    if (!started || (started && hold))
-    {
-        t = new Date(0);
-        t.setHours(0);
-        t.setMinutes(minutes);
-        t.setSeconds(seconds);
-        t.setMilliseconds(milliseconds);
-    }
-
-    // Update countdown text
-    let prefix = Date.now() > liftoffTime ? "T+" : "T-";
-    countdownH2.innerHTML = prefix + t.toTimeString().split(' ')[0];
-    millisecondsP.innerHTML = String(t.getMilliseconds()).padStart(3, '0');
+    const { clock, ms } = formatCountdown();
+    countdownH2.innerHTML = clock;
+    millisecondsP.innerHTML = ms;
 
     requestAnimationFrame(updateCountdown);
 }
@@ -97,26 +89,20 @@ startAbortButton.addEventListener("click", () => {
         hold = false;
         configured = false;
 
-        minutes = 0;
-        seconds = 0;
         milliseconds = 0;
-
         missionH2.innerHTML = "Mission Name";
     }
 });
 
 holdResumeButton.addEventListener("click", () => {
     if (!configured) return;
-    const t = getT();
 
     if (hold) {
-        hold = false;
         startTime = Date.now();
+        hold = false;
     } else {
+        milliseconds = -getT();
         hold = true;
-        minutes = t.getMinutes();
-        seconds = t.getSeconds();
-        milliseconds = t.getMilliseconds();
     }
 });
 
@@ -141,7 +127,7 @@ function updateButtons() {
     }
 
     // Hold / Resume
-    const canHold = Date.now() < liftoffTime && getT().getMinutes() >= 1;
+    const canHold = getT() < -60_000;
 
     if (!configured || !canHold) {
         holdResumeButton.innerHTML = "HOLD";
@@ -162,7 +148,7 @@ function updateButtons() {
     }
 
     // Configure
-    if (!configured) {
+    if (!started) {
         configButton.disabled = false;
     } else {
         configButton.disabled = true;
@@ -174,4 +160,4 @@ function updateButtons() {
 requestAnimationFrame(updateButtons);
 
 // Exports
-export { started }
+export { configured, started, hold }

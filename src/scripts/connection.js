@@ -1,7 +1,6 @@
 import { started } from "./countdown.js"
 
 // Manage connection
-const deviceName = "ESP32";
 const serviceUuid = "3343f2ee-4910-492a-b29b-181e051a631b";
 const testUuid = "313ce956-bbe0-47bf-8e32-b2c5e3a364ec";
 
@@ -24,7 +23,7 @@ function connect() {
     }
 
     navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
+        filters: [{ name: "Starkit" }],
         optionalServices: [serviceUuid]
     })
     .then(device => {
