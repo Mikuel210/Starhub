@@ -1,4 +1,5 @@
 import { started } from "./countdown.js"
+import { log } from "./logger.js"
 
 // Manage connection
 const serviceUuid = "3343f2ee-4910-492a-b29b-181e051a631b";
@@ -52,6 +53,7 @@ function connect() {
 
         connected = true;
         requestAnimationFrame(updateState);
+        log("Device connected");
 
         return characteristic.readValue();
     })
@@ -80,10 +82,6 @@ function disconnect() {
         console.log("Notifications stopped");
         return bleServer.disconnect();
     })
-    .then(() => {
-        console.log("Device disconnected");
-        connected = false;
-    })
     .catch(error => {
         console.log("Error disconnecting: " + error);
     });
@@ -100,8 +98,9 @@ function getServiceWithRetry(gattServer, uuid, attempts = 10, delayMs = 1000) {
 
 // Event handlers
 function onDisconnected(e) {
-    console.log("Device disconnected");
     connected = false;
+    console.log("Device disconnected");
+    log("Device disconnected");
 }
 
 function onCharacteristicChange(e) {

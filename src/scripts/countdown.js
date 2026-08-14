@@ -1,4 +1,5 @@
 import { connected } from "./connection.js"
+import { log } from "./logger.js"
 
 // Countdown configuration
 const configButton = document.getElementById("button-countdown-config");
@@ -27,6 +28,8 @@ configButton.addEventListener("click", () => {
 
     requestAnimationFrame(updateCountdown);
     missionH2.innerHTML = missionName;
+
+    log(`Mission configured: ${missionName}`);
 });
 
 // Update countdown
@@ -84,7 +87,11 @@ startAbortButton.addEventListener("click", () => {
     if (!started) {
         started = true;
         startTime = Date.now();
+
+        log("Countdown started");
     } else {
+        log("Abort triggered");
+
         started = false;
         hold = false;
         configured = false;
@@ -100,9 +107,13 @@ holdResumeButton.addEventListener("click", () => {
     if (hold) {
         startTime = Date.now();
         hold = false;
+
+        log("Countdown resumed");
     } else {
         milliseconds = -getT();
         hold = true;
+
+        log("Hold triggered");
     }
 });
 
@@ -160,4 +171,4 @@ function updateButtons() {
 requestAnimationFrame(updateButtons);
 
 // Exports
-export { configured, started, hold }
+export { configured, started, hold, pad, formatCountdown }
