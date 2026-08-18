@@ -1,4 +1,4 @@
-import { connected } from "./connection.js"
+import { connected, writeCommand } from "./connection.js"
 import { log } from "./logger.js"
 
 // Countdown configuration
@@ -36,7 +36,9 @@ configButton.addEventListener("click", () => {
 var configured = false;
 let started = false;
 let hold = false;
+let startup = false;
 
+let startupMillis = -20_000;
 var startTime;    // Set on start and resume
 var milliseconds; // Set on start and hold
 
@@ -74,7 +76,16 @@ function updateCountdown() {
     countdownH2.innerHTML = clock;
     millisecondsP.innerHTML = ms;
 
+    updateCountdownEvents();
     requestAnimationFrame(updateCountdown);
+}
+
+function updateCountdownEvents() {
+    const t = getT();
+    if (startup || t < startupMillis) return;
+        
+    writeCommand('S');
+    startup = true;
 }
 
 // Start and hold buttons
@@ -95,6 +106,7 @@ startAbortButton.addEventListener("click", () => {
         started = false;
         hold = false;
         configured = false;
+        startup = false;
 
         milliseconds = 0;
         missionH2.innerHTML = "Mission Name";
@@ -138,7 +150,7 @@ function updateButtons() {
     }
 
     // Hold / Resume
-    const canHold = getT() < -60_000;
+    const canHold = getT() < startupMillis;
 
     if (!configured || !canHold) {
         holdResumeButton.innerHTML = "HOLD";

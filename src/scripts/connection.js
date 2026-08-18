@@ -3,13 +3,16 @@ import { log } from "./logger.js"
 
 // Manage connection
 const serviceUuid = "3343f2ee-4910-492a-b29b-181e051a631b";
-const testUuid = "313ce956-bbe0-47bf-8e32-b2c5e3a364ec";
+const commandUuid = "313ce956-bbe0-47bf-8e32-b2c5e3a364ec";
+const telemetryUuid = "cf0ce5fe-6f1a-41b4-88b6-1304a50a2776";
 
 let connected = false;
 let bleServer;
-let serviceFound;
-let characteristicFound;
+let commandCharacteristic;
+let telemetryCharacteristic;
+let lastPacket;
 
+// Connect and disconnect
 const connectButton = document.getElementById("button-connect");
 const disconnectButton = document.getElementById("button-disconnect");
 const stateSpan = document.getElementById("span-state");
@@ -41,25 +44,30 @@ function connect() {
     })
     .then(service => {
         console.log("Service discovered: " + service.uuid);
-        serviceFound = service;
-
-        return service.getCharacteristic(testUuid);
+        
+        return Promise.all([
+            service.getCharacteristic(commandUuid),
+            service.getCharacteristic(telemetryUuid)
+        ]);
     })
-    .then(characteristic => {
-        console.log("Characteristic discovered:", characteristic.uuid);
-        characteristicFound = characteristic;
-        characteristic.addEventListener('characteristicvaluechanged', onCharacteristicChange);
-        characteristic.startNotifications();
+    .then(([command, telemetry]) => {
+        console.log("Command characteristic discovered:", command.uuid);
+        console.log("Telemetry characteristic discovered:", telemetry.uuid);
+
+        commandCharacteristic = command;
+        telemetryCharacteristic = telemetry;
+
+        telemetryCharacteristic.addEventListener('characteristicvaluechanged', onCharacteristicChange);
+        telemetryCharacteristic.startNotifications();
 
         connected = true;
-        requestAnimationFrame(updateState);
         log("Device connected");
-
-        return characteristic.readValue();
+        
+        return telemetryCharacteristic.readValue();
     })
     .then(value => {
-        console.log("Read value: " + value);
         const decodedValue = new TextDecoder().decode(value);
+        console.log("Read value: " + value);
         console.log("Decoded value: " + decodedValue);
     })
     .catch(error => {
@@ -73,12 +81,12 @@ function disconnect() {
         return;
     }
 
-    if (!characteristicFound) {
-        console.log("Disconnect failed: No characteristic found")
+    if (!telemetryCharacteristic) {
+        console.log("Disconnect failed: No telemetry characteristic found")
         return;
     }
 
-    characteristicFound.stopNotifications().then(() => {
+    telemetryCharacteristic.stopNotifications().then(() => {
         console.log("Notifications stopped");
         return bleServer.disconnect();
     })
@@ -99,42 +107,80 @@ function getServiceWithRetry(gattServer, uuid, attempts = 10, delayMs = 1000) {
 // Event handlers
 function onDisconnected(e) {
     connected = false;
+
     console.log("Device disconnected");
     log("Device disconnected");
 }
 
 function onCharacteristicChange(e) {
     const value = new TextDecoder().decode(e.target.value);
-    console.log("Characteristic value changed: " + value);
+    lastPacket = JSON.parse(value);
+
+    console.log("Packet received: " + lastPacket);
 }
 
-function write(value) {
+function writeCommand(value) {
     if (!bleServer || !bleServer.connected) {
         console.log("Write failed: Bluetooth is not connected");
         return;
     }
 
-    bleServiceFound.getCharacteristic(testUuid).then(characteristic => {
-        console.log("Characteristic found: " + characteristic.uuid);
-        const data = new Uint8Array([value]);
-        return characteristic.writeValue(data);
-    })
-    .catch(error => {
+    if (!commandCharacteristic) {
+        console.log("Write failed: Command characteristic not found");
+        return;
+    }
+
+    const data = new Uint8Array([value]);
+
+    commandCharacteristic.writeValue(data).catch(error => {
         console.error("Error writing to characteristic: " + error);
     });
 }
 
 // Update state and buttons
 function updateState() {
-    if (connected) {
-        stateSpan.innerHTML = "CONNECTED";
-        stateSpan.style.backgroundColor = "forestgreen"
+    if (connected && lastPacket !== undefined) {
+        switch (lastPacket.state) {
+            case 0:
+                stateSpan.innerHTML = "IDLE";
+                stateSpan.style.color = "black";
+                stateSpan.style.backgroundColor = "skyblue"
+                break;
 
-        requestAnimationFrame(updateState);
+            case 1:
+                stateSpan.innerHTML = "STARTUP";
+                stateSpan.style.color = "black";
+                stateSpan.style.backgroundColor = "mediumturquoise"
+                break;
+
+            case 2:
+                stateSpan.innerHTML = "FLIGHT";
+                stateSpan.style.color = "white";
+                stateSpan.style.backgroundColor = "mediumvioletred"
+                break;
+
+            case 3:
+                stateSpan.innerHTML = "ABORT";
+                stateSpan.style.color = "white";
+                stateSpan.style.backgroundColor = "crimson"
+                break;
+
+            case 4:
+                stateSpan.innerHTML = "LANDED";
+                stateSpan.style.color = "white";
+                stateSpan.style.backgroundColor = "forestgreen"
+                break;
+        
+            default:
+                break;
+        }
     } else {
         stateSpan.innerHTML = "DISCONNECTED";
+        stateSpan.style.color = "white";
         stateSpan.style.backgroundColor = "indianred"
     }
+
+    requestAnimationFrame(updateState);
 }
 
 function updateButtons() {
@@ -148,4 +194,4 @@ requestAnimationFrame(updateState);
 requestAnimationFrame(updateButtons);
 
 // Exports
-export { connected }
+export { connected, lastPacket, writeCommand }

@@ -8,3 +8,8 @@ Starhub is the mission control software for Starkit.
 - Mission and countdown management
 - Mission log that registers every event
 - Data dashboard and visualization
+
+## Tech Stack
+
+- Astro
+- Bun
