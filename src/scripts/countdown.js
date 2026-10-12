@@ -82,9 +82,10 @@ function updateCountdown() {
 
 function updateCountdownEvents() {
     const t = getT();
-    if (startup || t < startupMillis) return;
-        
+    if (startup || !started || t < startupMillis) return;
+
     writeCommand('S');
+    log("Startup triggered");
     startup = true;
 }
 
@@ -101,6 +102,7 @@ startAbortButton.addEventListener("click", () => {
 
         log("Countdown started");
     } else {
+        writeCommand('A')
         log("Abort triggered");
 
         started = false;

@@ -44,7 +44,7 @@ function connect() {
     })
     .then(service => {
         console.log("Service discovered: " + service.uuid);
-        
+
         return Promise.all([
             service.getCharacteristic(commandUuid),
             service.getCharacteristic(telemetryUuid)
@@ -62,7 +62,7 @@ function connect() {
 
         connected = true;
         log("Device connected");
-        
+
         return telemetryCharacteristic.readValue();
     })
     .then(value => {
@@ -130,7 +130,7 @@ function writeCommand(value) {
         return;
     }
 
-    const data = new Uint8Array([value]);
+    const data = new TextEncoder().encode(value);
 
     commandCharacteristic.writeValue(data).catch(error => {
         console.error("Error writing to characteristic: " + error);
@@ -138,6 +138,8 @@ function writeCommand(value) {
 }
 
 // Update state and buttons
+let previousState = 0
+
 function updateState() {
     if (connected && lastPacket !== undefined) {
         switch (lastPacket.state) {
@@ -170,9 +172,14 @@ function updateState() {
                 stateSpan.style.color = "white";
                 stateSpan.style.backgroundColor = "forestgreen"
                 break;
-        
+
             default:
                 break;
+        }
+
+        if (lastPacket.state != previousState) {
+          log(`State changed: ${stateSpan.innerHTML}`);
+          previousState = lastPacket.state;
         }
     } else {
         stateSpan.innerHTML = "DISCONNECTED";
