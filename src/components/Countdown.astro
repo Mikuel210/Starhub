@@ -22,10 +22,10 @@ import { Icon } from "astro-icon/components";
     #section-countdown {
         align-items: center;
         justify-content: center;
-        width: 600px;
+        width: 88%;
         margin-left: auto;
         margin-right: auto;
-        margin-top: 30px;
+        padding: 20px;
 
         > #button-countdown-config {
             display: block;
@@ -182,9 +182,9 @@ import { Icon } from "astro-icon/components";
             return;
         }
 
+        log("Countdown stopped");
         setState({ configured: false });
         missionH2.innerHTML = "Mission Name";
-        log("Countdown stopped");
     });
 
     function updateButtons() {

@@ -4,13 +4,60 @@ import Header from "../components/Header.astro";
 import Countdown from "../components/Countdown.astro";
 import Connection from "../components/Connection.astro";
 import Log from "../components/Log.astro";
+import Chart from "../components/Chart.astro";
 ---
 
 <Layout>
     <Header />
-    <Countdown />
-    <Connection />
-    <Log />
+
+    <div class="wrapper">
+        <div class="left">
+            <Countdown />
+            <Connection />
+            <Log />
+        </div>
+
+        <div class="right">
+            <Chart title="Acceleration" canvasId="canvas-acceleration" />
+            <Chart title="Gyroscope" canvasId="canvas-gyroscope" />
+            <Chart title="Magnetometer" canvasId="canvas-magnetometer" />
+            <Chart title="Orientation" canvasId="canvas-orientation" />
+            <Chart title="Altitude" canvasId="canvas-altitude" />
+            <Chart title="Correction" canvasId="canvas-correction" />
+            <Chart title="Throttle" canvasId="canvas-throttle" />
+            <Chart title="Voltage" canvasId="canvas-voltage" />
+        </div>
+    </div>
 
     <script src="../scripts/main.ts"></script>
 </Layout>
+
+<style>
+    div.wrapper {
+        min-width: 100dvw;
+        margin: 0;
+        padding: 0;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+    }
+
+    div.left {
+        width: 33.5dvw;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    div.right {
+        width: 66.5dvw;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, calc(19dvw + 40px));
+        align-content: start;
+        gap: 12px;
+    }
+</style>

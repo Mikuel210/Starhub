@@ -17,6 +17,10 @@ type DataPacket = {
     altitude_mm: number;
     underVoltage: boolean;
   };
+  controlData: {
+    correction_deg: number[];
+    throttle_01: number;
+  };
 };
 
 // Manage connection
