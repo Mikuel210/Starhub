@@ -1,5 +1,5 @@
-import { started } from "./countdown.js"
-import { log } from "./logger.js"
+import { started, land } from "./countdown.js";
+import { log } from "./logger.js";
 
 // Manage connection
 const serviceUuid = "3343f2ee-4910-492a-b29b-181e051a631b";
@@ -21,184 +21,199 @@ connectButton.addEventListener("click", connect);
 disconnectButton.addEventListener("click", disconnect);
 
 function connect() {
-    if (!navigator.bluetooth) {
-        alert("Bluetooth is unsupported in your browser");
-        return;
-    }
+  if (!navigator.bluetooth) {
+    alert("Bluetooth is unsupported in your browser");
+    return;
+  }
 
-    navigator.bluetooth.requestDevice({
-        filters: [{ name: "Starkit" }],
-        optionalServices: [serviceUuid]
+  navigator.bluetooth
+    .requestDevice({
+      filters: [{ name: "Starkit" }],
+      optionalServices: [serviceUuid],
     })
-    .then(device => {
-        console.log("Device selected: " + device);
-        device.addEventListener('gattserverdisconnected', onDisconnected);
+    .then((device) => {
+      console.log("Device selected: " + device);
+      device.addEventListener("gattserverdisconnected", onDisconnected);
 
-        return device.gatt.connect();
+      return device.gatt.connect();
     })
-    .then(gattServer =>{
-        console.log("Connected to GATT Server");
-        bleServer = gattServer;
+    .then((gattServer) => {
+      console.log("Connected to GATT Server");
+      bleServer = gattServer;
 
-        return getServiceWithRetry(gattServer, serviceUuid);
+      return getServiceWithRetry(gattServer, serviceUuid);
     })
-    .then(service => {
-        console.log("Service discovered: " + service.uuid);
+    .then((service) => {
+      console.log("Service discovered: " + service.uuid);
 
-        return Promise.all([
-            service.getCharacteristic(commandUuid),
-            service.getCharacteristic(telemetryUuid)
-        ]);
+      return Promise.all([
+        service.getCharacteristic(commandUuid),
+        service.getCharacteristic(telemetryUuid),
+      ]);
     })
     .then(([command, telemetry]) => {
-        console.log("Command characteristic discovered:", command.uuid);
-        console.log("Telemetry characteristic discovered:", telemetry.uuid);
+      console.log("Command characteristic discovered:", command.uuid);
+      console.log("Telemetry characteristic discovered:", telemetry.uuid);
 
-        commandCharacteristic = command;
-        telemetryCharacteristic = telemetry;
+      commandCharacteristic = command;
+      telemetryCharacteristic = telemetry;
 
-        telemetryCharacteristic.addEventListener('characteristicvaluechanged', onCharacteristicChange);
-        telemetryCharacteristic.startNotifications();
+      telemetryCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        onCharacteristicChange,
+      );
+      telemetryCharacteristic.startNotifications();
 
-        connected = true;
-        log("Device connected");
+      connected = true;
+      log("Device connected");
 
-        return telemetryCharacteristic.readValue();
+      return telemetryCharacteristic.readValue();
     })
-    .then(value => {
-        const decodedValue = new TextDecoder().decode(value);
-        console.log("Read value: " + value);
-        console.log("Decoded value: " + decodedValue);
+    .then((value) => {
+      const decodedValue = new TextDecoder().decode(value);
+      console.log("Read value: " + value);
+      console.log("Decoded value: " + decodedValue);
     })
-    .catch(error => {
-        console.log("Error: " + error);
-    })
+    .catch((error) => {
+      console.log("Error: " + error);
+    });
 }
 
 function disconnect() {
-    if (!bleServer || !bleServer.connected) {
-        console.log("Disconnect failed: Bluetooth is already disconnected");
-        return;
-    }
+  if (!bleServer || !bleServer.connected) {
+    console.log("Disconnect failed: Bluetooth is already disconnected");
+    return;
+  }
 
-    if (!telemetryCharacteristic) {
-        console.log("Disconnect failed: No telemetry characteristic found")
-        return;
-    }
+  if (!telemetryCharacteristic) {
+    console.log("Disconnect failed: No telemetry characteristic found");
+    return;
+  }
 
-    telemetryCharacteristic.stopNotifications().then(() => {
-        console.log("Notifications stopped");
-        return bleServer.disconnect();
+  telemetryCharacteristic
+    .stopNotifications()
+    .then(() => {
+      console.log("Notifications stopped");
+      return bleServer.disconnect();
     })
-    .catch(error => {
-        console.log("Error disconnecting: " + error);
+    .catch((error) => {
+      console.log("Error disconnecting: " + error);
     });
 }
 
 function getServiceWithRetry(gattServer, uuid, attempts = 10, delayMs = 1000) {
-    return gattServer.getPrimaryService(uuid).catch(error => {
-        if (attempts <= 1) throw error;
+  return gattServer.getPrimaryService(uuid).catch((error) => {
+    if (attempts <= 1) throw error;
 
-        return new Promise(resolve => setTimeout(resolve, delayMs))
-            .then(() => getServiceWithRetry(gattServer, uuid, attempts - 1, delayMs));
-    });
+    return new Promise((resolve) => setTimeout(resolve, delayMs)).then(() =>
+      getServiceWithRetry(gattServer, uuid, attempts - 1, delayMs),
+    );
+  });
 }
 
 // Event handlers
 function onDisconnected(e) {
-    connected = false;
+  connected = false;
 
-    console.log("Device disconnected");
-    log("Device disconnected");
+  console.log("Device disconnected");
+  log("Device disconnected");
 }
 
 function onCharacteristicChange(e) {
-    const value = new TextDecoder().decode(e.target.value);
-    lastPacket = JSON.parse(value);
+  const value = new TextDecoder().decode(e.target.value);
+  lastPacket = JSON.parse(value);
 
-    console.log("Packet received: " + lastPacket);
+  console.log("Packet received: " + lastPacket);
 }
 
 function writeCommand(value) {
-    if (!bleServer || !bleServer.connected) {
-        console.log("Write failed: Bluetooth is not connected");
-        return;
-    }
+  if (!bleServer || !bleServer.connected) {
+    console.log("Write failed: Bluetooth is not connected");
+    return;
+  }
 
-    if (!commandCharacteristic) {
-        console.log("Write failed: Command characteristic not found");
-        return;
-    }
+  if (!commandCharacteristic) {
+    console.log("Write failed: Command characteristic not found");
+    return;
+  }
 
-    const data = new TextEncoder().encode(value);
+  const data = new TextEncoder().encode(value);
 
-    commandCharacteristic.writeValue(data).catch(error => {
-        console.error("Error writing to characteristic: " + error);
-    });
+  commandCharacteristic.writeValue(data).catch((error) => {
+    console.error("Error writing to characteristic: " + error);
+  });
 }
 
 // Update state and buttons
-let previousState = 0
+let previousState = 0;
 
 function updateState() {
-    if (connected && lastPacket !== undefined) {
-        switch (lastPacket.state) {
-            case 0:
-                stateSpan.innerHTML = "IDLE";
-                stateSpan.style.color = "black";
-                stateSpan.style.backgroundColor = "skyblue"
-                break;
+  if (connected && lastPacket !== undefined) {
+    switch (lastPacket.state) {
+      case 0:
+        stateSpan.innerHTML = "IDLE";
+        stateSpan.style.color = "black";
+        stateSpan.style.backgroundColor = "skyblue";
+        break;
 
-            case 1:
-                stateSpan.innerHTML = "STARTUP";
-                stateSpan.style.color = "black";
-                stateSpan.style.backgroundColor = "mediumturquoise"
-                break;
+      case 1:
+        stateSpan.innerHTML = "STARTUP";
+        stateSpan.style.color = "black";
+        stateSpan.style.backgroundColor = "mediumturquoise";
+        break;
 
-            case 2:
-                stateSpan.innerHTML = "FLIGHT";
-                stateSpan.style.color = "white";
-                stateSpan.style.backgroundColor = "mediumvioletred"
-                break;
-
-            case 3:
-                stateSpan.innerHTML = "ABORT";
-                stateSpan.style.color = "white";
-                stateSpan.style.backgroundColor = "crimson"
-                break;
-
-            case 4:
-                stateSpan.innerHTML = "LANDED";
-                stateSpan.style.color = "white";
-                stateSpan.style.backgroundColor = "forestgreen"
-                break;
-
-            default:
-                break;
-        }
-
-        if (lastPacket.state != previousState) {
-          log(`State changed: ${stateSpan.innerHTML}`);
-          previousState = lastPacket.state;
-        }
-    } else {
-        stateSpan.innerHTML = "DISCONNECTED";
+      case 2:
+        stateSpan.innerHTML = "FLIGHT";
         stateSpan.style.color = "white";
-        stateSpan.style.backgroundColor = "indianred"
+        stateSpan.style.backgroundColor = "mediumvioletred";
+        break;
+
+      case 3:
+        stateSpan.innerHTML = "ABORT";
+        stateSpan.style.color = "white";
+        stateSpan.style.backgroundColor = "crimson";
+        break;
+
+      case 4:
+        stateSpan.innerHTML = "LANDED";
+        stateSpan.style.color = "white";
+        stateSpan.style.backgroundColor = "forestgreen";
+        break;
+
+      default:
+        break;
     }
 
-    requestAnimationFrame(updateState);
+    if (lastPacket.state != previousState) {
+      log(`State changed: ${stateSpan.innerHTML}`);
+      previousState = lastPacket.state;
+
+      if (lastPacket.state == 4) {
+        land();
+      }
+    }
+  } else {
+    stateSpan.innerHTML = "DISCONNECTED";
+    stateSpan.style.color = "white";
+    stateSpan.style.backgroundColor = "indianred";
+  }
+
+  requestAnimationFrame(updateState);
 }
 
 function updateButtons() {
-    connectButton.disabled = started;
-    disconnectButton.disabled = started;
+  connectButton.disabled = started;
+  disconnectButton.disabled = started;
 
-    requestAnimationFrame(updateButtons);
+  requestAnimationFrame(updateButtons);
+}
+
+function getState() {
+  return previousState;
 }
 
 requestAnimationFrame(updateState);
 requestAnimationFrame(updateButtons);
 
 // Exports
-export { connected, lastPacket, writeCommand }
+export { connected, lastPacket, writeCommand, getState };
