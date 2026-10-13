@@ -1,4 +1,3 @@
-import { state, land } from "./countdown.js";
 import { log } from "./logger.js";
 
 // Packet type
@@ -29,22 +28,9 @@ let connected = false;
 let bleServer: BluetoothRemoteGATTServer;
 let commandCharacteristic: BluetoothRemoteGATTCharacteristic;
 let telemetryCharacteristic: BluetoothRemoteGATTCharacteristic;
-let lastPacket: DataPacket;
+let lastPacket: DataPacket | undefined;
 
 // Connect and disconnect
-const connectButton = document.getElementById(
-  "button-connect",
-) as HTMLButtonElement;
-
-const disconnectButton = document.getElementById(
-  "button-disconnect",
-) as HTMLButtonElement;
-
-const stateSpan = document.getElementById("span-state") as HTMLSpanElement;
-
-connectButton.addEventListener("click", connect);
-disconnectButton.addEventListener("click", disconnect);
-
 function connect() {
   if (!navigator.bluetooth) {
     alert("Bluetooth is unsupported in your browser");
@@ -60,11 +46,10 @@ function connect() {
       console.log("Device selected: " + device);
       device.addEventListener("gattserverdisconnected", onDisconnected);
 
-      if (!device.gatt) return;
+      if (!device.gatt) throw new Error("No GATT server on selected device");
       return device.gatt.connect();
     })
     .then((gattServer) => {
-      if (!gattServer) return;
       console.log("Connected to GATT Server");
       bleServer = gattServer;
 
@@ -79,7 +64,10 @@ function connect() {
         service.getCharacteristic(telemetryUuid),
       ]);
     })
-    .then(([command, telemetry]) => {
+    .then((characteristics) => {
+      if (!characteristics) return;
+      const [command, telemetry] = characteristics;
+
       console.log("Command characteristic discovered:", command.uuid);
       console.log("Telemetry characteristic discovered:", telemetry.uuid);
 
@@ -129,19 +117,19 @@ function disconnect() {
     });
 }
 
-function getServiceWithRetry(
+async function getServiceWithRetry(
   gattServer: BluetoothRemoteGATTServer,
   uuid: string,
   attempts = 10,
   delayMs = 1000,
 ): Promise<BluetoothRemoteGATTService> {
-  return gattServer.getPrimaryService(uuid).catch((error) => {
+  try {
+    return await gattServer.getPrimaryService(uuid);
+  } catch (error) {
     if (attempts <= 1) throw error;
-
-    return new Promise((resolve) => setTimeout(resolve, delayMs)).then(() =>
-      getServiceWithRetry(gattServer, uuid, attempts - 1, delayMs),
-    );
-  });
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return await getServiceWithRetry(gattServer, uuid, attempts - 1, delayMs);
+  }
 }
 
 // Event handlers
@@ -178,76 +166,5 @@ function writeCommand(value: string) {
   });
 }
 
-// Update state and buttons
-let previousState = 0;
-
-function updateState() {
-  if (connected && lastPacket !== undefined) {
-    switch (lastPacket.state) {
-      case 0:
-        stateSpan.innerHTML = "IDLE";
-        stateSpan.style.color = "black";
-        stateSpan.style.backgroundColor = "skyblue";
-        break;
-
-      case 1:
-        stateSpan.innerHTML = "STARTUP";
-        stateSpan.style.color = "black";
-        stateSpan.style.backgroundColor = "mediumturquoise";
-        break;
-
-      case 2:
-        stateSpan.innerHTML = "FLIGHT";
-        stateSpan.style.color = "white";
-        stateSpan.style.backgroundColor = "mediumvioletred";
-        break;
-
-      case 3:
-        stateSpan.innerHTML = "ABORT";
-        stateSpan.style.color = "white";
-        stateSpan.style.backgroundColor = "crimson";
-        break;
-
-      case 4:
-        stateSpan.innerHTML = "LANDED";
-        stateSpan.style.color = "white";
-        stateSpan.style.backgroundColor = "forestgreen";
-        break;
-
-      default:
-        break;
-    }
-
-    if (lastPacket.state != previousState) {
-      log(`State changed: ${stateSpan.innerHTML}`);
-      previousState = lastPacket.state;
-
-      if (lastPacket.state == 4) {
-        land();
-      }
-    }
-  } else {
-    stateSpan.innerHTML = "DISCONNECTED";
-    stateSpan.style.color = "white";
-    stateSpan.style.backgroundColor = "indianred";
-  }
-
-  requestAnimationFrame(updateState);
-}
-
-function updateButtons() {
-  connectButton.disabled = state.configured && state.started;
-  disconnectButton.disabled = state.configured && state.started;
-
-  requestAnimationFrame(updateButtons);
-}
-
-function getState() {
-  return previousState;
-}
-
-requestAnimationFrame(updateState);
-requestAnimationFrame(updateButtons);
-
 // Exports
-export { connected, lastPacket, writeCommand, getState };
+export { connected, lastPacket, writeCommand, connect, disconnect };

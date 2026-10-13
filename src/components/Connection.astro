@@ -31,3 +31,83 @@
         }
     }
 </style>
+
+<script>
+    import { connected, lastPacket, connect, disconnect } from "../scripts/connection";
+    import { state, land } from "../scripts/countdown";
+    import { log } from "../scripts/logger";
+
+    const connectButton = document.getElementById("button-connect") as HTMLButtonElement;
+    const disconnectButton = document.getElementById("button-disconnect") as HTMLButtonElement;
+    const stateSpan = document.getElementById("span-state") as HTMLSpanElement;
+
+    connectButton.addEventListener("click", connect);
+    disconnectButton.addEventListener("click", disconnect);
+
+    // Update state and buttons
+    let previousState = 0;
+
+    function updateState() {
+        if (connected && lastPacket !== undefined) {
+            switch (lastPacket.state) {
+                case 0:
+                    stateSpan.innerHTML = "IDLE";
+                    stateSpan.style.color = "black";
+                    stateSpan.style.backgroundColor = "skyblue";
+                    break;
+
+                case 1:
+                    stateSpan.innerHTML = "STARTUP";
+                    stateSpan.style.color = "black";
+                    stateSpan.style.backgroundColor = "mediumturquoise";
+                    break;
+
+                case 2:
+                    stateSpan.innerHTML = "FLIGHT";
+                    stateSpan.style.color = "white";
+                    stateSpan.style.backgroundColor = "mediumvioletred";
+                    break;
+
+                case 3:
+                    stateSpan.innerHTML = "ABORT";
+                    stateSpan.style.color = "white";
+                    stateSpan.style.backgroundColor = "crimson";
+                    break;
+
+                case 4:
+                    stateSpan.innerHTML = "LANDED";
+                    stateSpan.style.color = "white";
+                    stateSpan.style.backgroundColor = "forestgreen";
+                    break;
+
+                default:
+                    break;
+            }
+
+            if (lastPacket.state != previousState) {
+                log(`State changed: ${stateSpan.innerHTML}`);
+                previousState = lastPacket.state;
+
+                if (lastPacket.state == 4) {
+                    land();
+                }
+            }
+        } else {
+            stateSpan.innerHTML = "DISCONNECTED";
+            stateSpan.style.color = "white";
+            stateSpan.style.backgroundColor = "indianred";
+        }
+
+        requestAnimationFrame(updateState);
+    }
+
+    function updateButtons() {
+        connectButton.disabled = state.configured && state.started;
+        disconnectButton.disabled = state.configured && state.started;
+
+        requestAnimationFrame(updateButtons);
+    }
+
+    requestAnimationFrame(updateState);
+    requestAnimationFrame(updateButtons);
+</script>
