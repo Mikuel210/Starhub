@@ -1,5 +1,24 @@
-import { started, land } from "./countdown.js";
+import { state, land } from "./countdown.js";
 import { log } from "./logger.js";
+
+// Packet type
+type DataPacket = {
+  state: number;
+  sensorData: {
+    accel_mps2: number[];
+    gyro_radps: number[];
+    magnetometer: number[];
+    distance_cm: number;
+    lidarAvailable: boolean;
+    voltage1_v: number;
+    voltage2_v: number;
+  };
+  fusionData: {
+    orientation_deg: number[];
+    altitude_mm: number;
+    underVoltage: boolean;
+  };
+};
 
 // Manage connection
 const serviceUuid = "3343f2ee-4910-492a-b29b-181e051a631b";
@@ -7,15 +26,21 @@ const commandUuid = "313ce956-bbe0-47bf-8e32-b2c5e3a364ec";
 const telemetryUuid = "cf0ce5fe-6f1a-41b4-88b6-1304a50a2776";
 
 let connected = false;
-let bleServer;
-let commandCharacteristic;
-let telemetryCharacteristic;
-let lastPacket;
+let bleServer: BluetoothRemoteGATTServer;
+let commandCharacteristic: BluetoothRemoteGATTCharacteristic;
+let telemetryCharacteristic: BluetoothRemoteGATTCharacteristic;
+let lastPacket: DataPacket;
 
 // Connect and disconnect
-const connectButton = document.getElementById("button-connect");
-const disconnectButton = document.getElementById("button-disconnect");
-const stateSpan = document.getElementById("span-state");
+const connectButton = document.getElementById(
+  "button-connect",
+) as HTMLButtonElement;
+
+const disconnectButton = document.getElementById(
+  "button-disconnect",
+) as HTMLButtonElement;
+
+const stateSpan = document.getElementById("span-state") as HTMLSpanElement;
 
 connectButton.addEventListener("click", connect);
 disconnectButton.addEventListener("click", disconnect);
@@ -35,15 +60,18 @@ function connect() {
       console.log("Device selected: " + device);
       device.addEventListener("gattserverdisconnected", onDisconnected);
 
+      if (!device.gatt) return;
       return device.gatt.connect();
     })
     .then((gattServer) => {
+      if (!gattServer) return;
       console.log("Connected to GATT Server");
       bleServer = gattServer;
 
       return getServiceWithRetry(gattServer, serviceUuid);
     })
     .then((service) => {
+      if (!service) return;
       console.log("Service discovered: " + service.uuid);
 
       return Promise.all([
@@ -62,11 +90,11 @@ function connect() {
         "characteristicvaluechanged",
         onCharacteristicChange,
       );
+
       telemetryCharacteristic.startNotifications();
 
       connected = true;
       log("Device connected");
-
       return telemetryCharacteristic.readValue();
     })
     .then((value) => {
@@ -101,7 +129,12 @@ function disconnect() {
     });
 }
 
-function getServiceWithRetry(gattServer, uuid, attempts = 10, delayMs = 1000) {
+function getServiceWithRetry(
+  gattServer: BluetoothRemoteGATTServer,
+  uuid: string,
+  attempts = 10,
+  delayMs = 1000,
+): Promise<BluetoothRemoteGATTService> {
   return gattServer.getPrimaryService(uuid).catch((error) => {
     if (attempts <= 1) throw error;
 
@@ -112,21 +145,22 @@ function getServiceWithRetry(gattServer, uuid, attempts = 10, delayMs = 1000) {
 }
 
 // Event handlers
-function onDisconnected(e) {
+function onDisconnected(e: Event) {
   connected = false;
 
   console.log("Device disconnected");
   log("Device disconnected");
 }
 
-function onCharacteristicChange(e) {
-  const value = new TextDecoder().decode(e.target.value);
+function onCharacteristicChange(e: Event) {
+  const target: any = e.target;
+  const value = new TextDecoder().decode(target.value);
   lastPacket = JSON.parse(value);
 
   console.log("Packet received: " + lastPacket);
 }
 
-function writeCommand(value) {
+function writeCommand(value: string) {
   if (!bleServer || !bleServer.connected) {
     console.log("Write failed: Bluetooth is not connected");
     return;
@@ -202,8 +236,8 @@ function updateState() {
 }
 
 function updateButtons() {
-  connectButton.disabled = started;
-  disconnectButton.disabled = started;
+  connectButton.disabled = state.configured && state.started;
+  disconnectButton.disabled = state.configured && state.started;
 
   requestAnimationFrame(updateButtons);
 }

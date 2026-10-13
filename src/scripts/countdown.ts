@@ -2,14 +2,32 @@ import { connected, writeCommand, getState } from "./connection.js";
 import { log } from "./logger.js";
 
 // Countdown configuration
-const configButton = document.getElementById("button-countdown-config");
-const missionH2 = document.getElementById("h2-mission");
-const countdownH2 = document.getElementById("h2-countdown");
-const millisecondsP = document.getElementById("p-milliseconds");
+const configButton = document.getElementById(
+  "button-countdown-config",
+) as HTMLButtonElement;
+const missionH2 = document.getElementById("h2-mission") as HTMLHeadingElement;
+const countdownH2 = document.getElementById(
+  "h2-countdown",
+) as HTMLHeadingElement;
+const millisecondsP = document.getElementById(
+  "p-milliseconds",
+) as HTMLParagraphElement;
 
 configButton.addEventListener("click", () => {
   const missionName = prompt("Mission Name");
+
+  if (!missionName) {
+    alert("No mission name provided");
+    return;
+  }
+
   const minutesString = prompt("Countdown Minutes");
+
+  if (!minutesString) {
+    alert("No minutes provided");
+    return;
+  }
+
   const minutes = parseFloat(minutesString);
 
   if (isNaN(minutes)) {
@@ -23,7 +41,7 @@ configButton.addEventListener("click", () => {
   }
 
   milliseconds = Math.floor(minutes * 60_000);
-  configured = true;
+  state = { configured: true, started: false };
   startTime = Date.now();
 
   requestAnimationFrame(updateCountdown);
@@ -33,27 +51,32 @@ configButton.addEventListener("click", () => {
 });
 
 // Update countdown
-var configured = false;
-let started = false;
-let hold = false;
-let startup = false;
-let aborted = false;
-let landed = false;
+type State =
+  | { configured: false }
+  | { configured: true; started: false }
+  | {
+      configured: true;
+      started: true;
+      hold: boolean;
+      startup: boolean;
+      aborted: boolean;
+      landed: boolean;
+    };
 
+var state: State = { configured: false };
 let startupMillis = -20_000;
-var startTime; // Set on start and resume
-var milliseconds; // Set on start and hold
+var startTime: number; // Set on start and resume
+var milliseconds: number; // Set on start and hold
 
 function getT() {
-  if (!configured) return 0;
-
-  if (!started || (started && hold)) return -milliseconds;
+  if (!state.configured) return 0;
+  if (!state.started || (state.started && state.hold)) return -milliseconds;
 
   const liftoffTime = new Date(startTime + milliseconds);
   return new Date(Date.now()).getTime() - liftoffTime.getTime();
 }
 
-function pad(number, length = 2) {
+function pad(number: number, length = 2) {
   return String(number).padStart(length, "0");
 }
 
@@ -82,76 +105,105 @@ function updateCountdown() {
 
 function updateCountdownEvents() {
   const t = getT();
-  if (startup || aborted || !started || t < startupMillis) return;
 
-  writeCommand("S");
-  log("Startup triggered");
-  startup = true;
+  if (
+    state.configured &&
+    state.started &&
+    !state.startup &&
+    !state.aborted &&
+    t < startupMillis
+  ) {
+    writeCommand("S");
+    log("Startup triggered");
+    state.startup = true;
+  }
 }
 
 // Start, hold and stop buttons
-const startAbortButton = document.getElementById("button-start-abort");
-const holdResumeButton = document.getElementById("button-hold-resume");
-const stopButton = document.getElementById("button-stop");
+const startAbortButton = document.getElementById(
+  "button-start-abort",
+) as HTMLButtonElement;
+const holdResumeButton = document.getElementById(
+  "button-hold-resume",
+) as HTMLButtonElement;
+
+const stopButton = document.getElementById("button-stop") as HTMLButtonElement;
 
 startAbortButton.addEventListener("click", () => {
-  if (!configured || aborted || landed) return;
+  if (
+    !state.configured ||
+    (state.configured && state.started && (state.aborted || state.landed))
+  ) {
+    return;
+  }
 
-  if (!started) {
-    started = true;
+  if (!state.started) {
+    state = {
+      configured: true,
+      started: true,
+      hold: false,
+      startup: false,
+      aborted: false,
+      landed: false,
+    };
+
     startTime = Date.now();
     log("Countdown started");
   } else {
-    aborted = true;
+    state.aborted = true;
     writeCommand("A");
     log("Abort triggered");
   }
 });
 
 holdResumeButton.addEventListener("click", () => {
-  if (!configured || aborted || landed) return;
+  if (
+    !state.configured ||
+    !state.started ||
+    (state.configured && state.started && (state.aborted || state.landed))
+  ) {
+    return;
+  }
 
-  if (hold) {
+  if (state.hold) {
     startTime = Date.now();
-    hold = false;
-
+    state.hold = false;
     log("Countdown resumed");
   } else {
     milliseconds = -getT();
-    hold = true;
-
+    state.hold = true;
     log("Hold triggered");
   }
 });
 
 stopButton.addEventListener("click", () => {
-  if (!(started && (aborted || landed || !startup))) return;
-  log("Countdown stopped");
+  if (!(
+    state.configured &&
+    state.started &&
+    (state.aborted || state.landed || !state.startup)
+  )) {
+    return;
+  }
 
-  started = false;
-  hold = false;
-  configured = false;
-  startup = false;
-  aborted = false;
-  landed = false;
-
-  milliseconds = 0;
+  state = { configured: false };
   missionH2.innerHTML = "Mission Name";
+  milliseconds = 0;
+  log("Countdown stopped");
 });
 
 function updateButtons() {
   // Start / Abort
-  if (!configured || !connected || (!started && getState() != 0)) {
+  if (!state.configured || !connected || (!state.started && getState() != 0)) {
     startAbortButton.innerHTML = "START";
     startAbortButton.style.backgroundColor = "silver";
     startAbortButton.style.color = "";
     startAbortButton.disabled = true;
-  } else if (started && !(aborted || landed)) {
+  } else if (state.started && !(state.aborted || state.landed)) {
     startAbortButton.innerHTML = "ABORT";
     startAbortButton.style.backgroundColor = "indianred";
     startAbortButton.style.color = "white";
     startAbortButton.disabled = false;
-  } else if (started && (aborted || landed)) {
+  } else if (state.started && (state.aborted || state.landed)) {
     startAbortButton.innerHTML = "ABORT";
     startAbortButton.style.backgroundColor = "silver";
     startAbortButton.style.color = "";
@@ -164,17 +216,22 @@ function updateButtons() {
   }
 
   // Hold / Resume
-  const canHold = getT() < startupMillis && !aborted && !landed;
+  const canHold =
+    getT() < startupMillis &&
+    state.configured &&
+    state.started &&
+    !state.aborted &&
+    !state.landed;
 
-  if (!configured || !canHold) {
+  if (!state.configured || !canHold) {
     holdResumeButton.innerHTML = "HOLD";
     holdResumeButton.style.backgroundColor = "silver";
     holdResumeButton.disabled = true;
-  } else if (started && hold) {
+  } else if (state.started && state.hold) {
     holdResumeButton.innerHTML = "RESUME";
     holdResumeButton.style.backgroundColor = "skyblue";
     holdResumeButton.disabled = false;
-  } else if (started && !hold) {
+  } else if (state.started && !state.hold) {
     holdResumeButton.innerHTML = "HOLD";
     holdResumeButton.style.backgroundColor = "gold";
     holdResumeButton.disabled = false;
@@ -185,7 +242,11 @@ function updateButtons() {
   }
 
   // Stop
-  if (started && (aborted || landed || !startup)) {
+  if (
+    state.configured &&
+    state.started &&
+    (state.aborted || state.landed || !state.startup)
+  ) {
     stopButton.style.backgroundColor = "silver";
     stopButton.disabled = false;
   } else {
@@ -194,7 +255,7 @@ function updateButtons() {
   }
 
   // Configure
-  if (!started) {
+  if (!state.configured || !state.started) {
     configButton.disabled = false;
   } else {
     configButton.disabled = true;
@@ -204,10 +265,11 @@ function updateButtons() {
 }
 
 function land() {
-  landed = true;
+  if (!state.configured || !state.started) return;
+  state.landed = true;
 }
 
 requestAnimationFrame(updateButtons);
 
 // Exports
-export { configured, started, hold, pad, formatCountdown, land };
+export { state, pad, formatCountdown, land };

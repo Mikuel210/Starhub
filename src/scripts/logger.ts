@@ -1,7 +1,7 @@
-import { started, pad, formatCountdown } from "./countdown.js";
+import { state, pad, formatCountdown } from "./countdown.js";
 
 // Log function
-const logP = document.getElementById("p-log");
+const logP = document.getElementById("p-log") as HTMLParagraphElement;
 
 function formatTime() {
   const time = new Date(Date.now());
@@ -13,12 +13,12 @@ function formatTime() {
   return `${hours}:${minutes}:${seconds}.${ms}`;
 }
 
-function log(value) {
+function log(value: unknown) {
   const time = formatTime();
   const { clock, ms } = formatCountdown();
 
   logP.innerHTML += `[${time}`;
-  if (started) logP.innerHTML += ` ${clock}.${ms}`;
+  if (state.configured && state.started) logP.innerHTML += ` ${clock}.${ms}`;
   logP.innerHTML += `] ${value}<br/>`;
 }
 
