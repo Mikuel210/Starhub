@@ -1,7 +1,8 @@
+import { logPacket } from "./charts.js";
 import { log } from "./logger.js";
 
 // Packet type
-type DataPacket = {
+export type DataPacket = {
   state: number;
   sensorData: {
     accel_mps2: number[];
@@ -149,6 +150,7 @@ function onCharacteristicChange(e: Event) {
   const value = new TextDecoder().decode(target.value);
   lastPacket = JSON.parse(value);
 
+  if (lastPacket) logPacket(lastPacket);
   console.log("Packet received: " + lastPacket);
 }
 

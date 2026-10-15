@@ -8,24 +8,29 @@ import Chart from "../components/Chart.astro";
 ---
 
 <Layout>
-    <Header />
-
     <div class="wrapper">
-        <div class="left">
-            <Countdown />
+        <div class="top">
             <Connection />
+            <Countdown />
             <Log />
         </div>
 
-        <div class="right">
+        <div class="charts">
+            <Chart title="Orientation" canvasId="canvas-orientation" />
+            <Chart title="Correction" canvasId="canvas-correction" />
+            <Chart title="Altitude" canvasId="canvas-altitude" />
+            <Chart title="Throttle" canvasId="canvas-throttle" />
             <Chart title="Acceleration" canvasId="canvas-acceleration" />
             <Chart title="Gyroscope" canvasId="canvas-gyroscope" />
             <Chart title="Magnetometer" canvasId="canvas-magnetometer" />
-            <Chart title="Orientation" canvasId="canvas-orientation" />
-            <Chart title="Altitude" canvasId="canvas-altitude" />
-            <Chart title="Correction" canvasId="canvas-correction" />
-            <Chart title="Throttle" canvasId="canvas-throttle" />
+            <Chart title="X Axis PID" canvasId="canvas-x-pid" />
+            <Chart title="Y Axis PID" canvasId="canvas-y-pid" />
+            <Chart title="Z Axis PID" canvasId="canvas-z-pid" />
+            <Chart title="Throttle PID" canvasId="canvas-throttle-pid" />
+            <Chart title="TVC Servos" canvasId="canvas-tvc" />
             <Chart title="Voltage" canvasId="canvas-voltage" />
+            <Chart title="Altitude KF" canvasId="canvas-altitude-kf" />
+            <Chart title="Altitude Internals" canvasId="canvas-altitude-internals" />
         </div>
     </div>
 
@@ -39,25 +44,34 @@ import Chart from "../components/Chart.astro";
         padding: 0;
         margin-bottom: 20px;
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         align-items: stretch;
     }
 
-    div.left {
-        width: 33.5dvw;
+    div.top {
+        width: calc(100% - 40px);
+        height: 200px;
         margin: 0;
-        padding: 0;
+        padding: 10px 20px;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
+
+        #section-countdown {
+            margin: 0 20px;
+            width: 600px;
+        }
     }
 
-    div.right {
-        width: 66.5dvw;
-        margin: 0;
-        padding: 0;
+    div.charts {
+        width: calc(100% - 40px);
         display: grid;
-        grid-template-columns: repeat(auto-fill, calc(19dvw + 40px));
-        align-content: start;
-        gap: 12px;
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: auto;
+        padding: 0 20px;
+        gap: 10px;
+
+        section {
+            flex: 1;
+        }
     }
 </style>

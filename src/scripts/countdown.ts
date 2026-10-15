@@ -17,7 +17,7 @@ type State =
     };
 
 let state: State = { configured: false };
-let startupMillis = -20_000;
+let startupMillis = -21_000;
 
 function getT() {
   if (!state.configured) return 0;
