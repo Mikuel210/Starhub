@@ -1,5 +1,6 @@
 import { logPacket } from "./charts.js";
 import { log } from "./logger.js";
+import { decodePacket } from "./telemetry.js";
 
 // Packet type
 export type DataPacket = {
@@ -13,14 +14,25 @@ export type DataPacket = {
     voltage1_v: number;
     voltage2_v: number;
   };
+  hardwareData: {
+    tvc_deg: number[];
+    leg_deg: number;
+    throttle_us: number;
+  };
   fusionData: {
     orientation_deg: number[];
     altitude_mm: number;
     underVoltage: boolean;
+    correctedDistance_mm: number;
+    rocketAccelZ_mmps2: number;
+    altitudeKfState: number[];
   };
   controlData: {
     correction_deg: number[];
     throttle_01: number;
+    xPid_deg: number[];
+    yPid_deg: number[];
+    altitudePid_mm: number[];
   };
 };
 
@@ -91,9 +103,9 @@ function connect() {
       return telemetryCharacteristic.readValue();
     })
     .then((value) => {
-      const decodedValue = new TextDecoder().decode(value);
-      console.log("Read value: " + value);
-      console.log("Decoded value: " + decodedValue);
+      if (value?.byteLength) {
+        console.log("Read packet:", decodePacket(value));
+      }
     })
     .catch((error) => {
       console.log("Error: " + error);
@@ -146,12 +158,17 @@ function onDisconnected(e: Event) {
 }
 
 function onCharacteristicChange(e: Event) {
-  const target: any = e.target;
-  const value = new TextDecoder().decode(target.value);
-  lastPacket = JSON.parse(value);
+  const target = e.target as BluetoothRemoteGATTCharacteristic | null;
+  if (!target?.value) return;
 
-  if (lastPacket) logPacket(lastPacket);
-  console.log("Packet received: " + lastPacket);
+  try {
+    lastPacket = decodePacket(target.value);
+  } catch (error) {
+    console.warn("Ignoring invalid telemetry packet:", error);
+    return;
+  }
+
+  logPacket(lastPacket);
 }
 
 function writeCommand(value: string) {

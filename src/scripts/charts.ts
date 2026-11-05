@@ -75,17 +75,17 @@ class TelemetryChart {
 const chartData: ChartData[] = [
   { name: "orientation", labels: ["x", "y", "z"] },
   { name: "correction", labels: ["x", "y", "z"] },
-  { name: "altitude", labels: ["distance", "altitude"] },
+  { name: "altitude", labels: ["distance", "altitude", "setpoint"] },
   { name: "throttle", labels: ["throttle"] },
   { name: "acceleration", labels: ["x", "y", "z"] },
   { name: "gyroscope", labels: ["x", "y", "z"] },
   { name: "magnetometer", labels: ["x", "y", "z"] },
-  { name: "x-pid", labels: ["p", "i", "d"] },
-  { name: "y-pid", labels: ["p", "i", "d"] },
-  { name: "z-pid", labels: ["p", "i", "d"] },
-  { name: "throttle-pid", labels: ["p", "i", "d"] },
+  { name: "x-pid", labels: ["p", "i", "d", "r"] },
+  { name: "y-pid", labels: ["p", "i", "d", "r"] },
+  { name: "altitude-pid", labels: ["p", "i", "d", "r"] },
   { name: "tvc", labels: ["xp", "xm", "yp", "ym"] },
-  { name: "voltage", labels: ["xp", "xm", "yp", "ym"] },
+  { name: "leg", labels: ["deg"] },
+  { name: "voltage", labels: ["v1", "v2"] },
   { name: "altitude-kf", labels: ["pos", "vel", "p11", "p12", "p22", "q11", "q12", "q22"] },
   { name: "altitude-internals", labels: ["distance", "acceleration"] },
 ];
@@ -103,7 +103,24 @@ function initialize() {
   }
 }
 
+// Keep only the newest sample while the browser is busy
+let pendingPacket: DataPacket | undefined;
+let renderScheduled = false;
+
 function logPacket(packet: DataPacket) {
+  pendingPacket = packet;
+  if (renderScheduled) return;
+  renderScheduled = true;
+
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    const latest = pendingPacket;
+    pendingPacket = undefined;
+    if (latest) renderPacket(latest);
+  });
+}
+
+function renderPacket(packet: DataPacket) {
   charts["orientation"].add({
     x: packet.fusionData.orientation_deg[0],
     y: packet.fusionData.orientation_deg[1],
@@ -119,6 +136,7 @@ function logPacket(packet: DataPacket) {
   charts["altitude"].add({
     distance: packet.sensorData.distance_cm * 10,
     altitude: packet.fusionData.altitude_mm,
+    setpoint: packet.controlData.altitudePid_mm[4],
   });
 
   charts["throttle"].add({
@@ -143,23 +161,58 @@ function logPacket(packet: DataPacket) {
     z: packet.sensorData.magnetometer[2],
   });
 
-  // TODO: PIDs
-
-  /*
-  charts["tvc"].add({
-    xp: packet.controlData.tvc_deg[0],
-    xm: packet.controlData.tvc_deg[1],
-    yp: packet.controlData.tvc_deg[2],
-    ym: packet.controlData.tvc_deg[3],
+  charts["x-pid"].add({
+    p: packet.controlData.xPid_deg[0],
+    i: packet.controlData.xPid_deg[1],
+    d: packet.controlData.xPid_deg[2],
+    r: packet.controlData.xPid_deg[3],
   });
-  */
+
+  charts["y-pid"].add({
+    p: packet.controlData.yPid_deg[0],
+    i: packet.controlData.yPid_deg[1],
+    d: packet.controlData.yPid_deg[2],
+    r: packet.controlData.yPid_deg[3],
+  });
+
+  charts["altitude-pid"].add({
+    p: packet.controlData.altitudePid_mm[0],
+    i: packet.controlData.altitudePid_mm[1],
+    d: packet.controlData.altitudePid_mm[2],
+    r: packet.controlData.altitudePid_mm[3],
+  });
+
+  charts["tvc"].add({
+    xp: packet.hardwareData.tvc_deg[0],
+    xm: packet.hardwareData.tvc_deg[1],
+    yp: packet.hardwareData.tvc_deg[2],
+    ym: packet.hardwareData.tvc_deg[3],
+  });
+
+  charts["leg"].add({
+    deg: packet.hardwareData.leg_deg,
+  });
 
   charts["voltage"].add({
     v1: packet.sensorData.voltage1_v,
     v2: packet.sensorData.voltage2_v,
   });
 
-  // TODO: KF
+  charts["altitude-kf"].add({
+    pos: packet.fusionData.altitudeKfState[0],
+    vel: packet.fusionData.altitudeKfState[1],
+    p11: packet.fusionData.altitudeKfState[2],
+    p12: packet.fusionData.altitudeKfState[3],
+    p22: packet.fusionData.altitudeKfState[4],
+    q11: packet.fusionData.altitudeKfState[5],
+    q12: packet.fusionData.altitudeKfState[6],
+    q22: packet.fusionData.altitudeKfState[7],
+  });
+
+  charts["altitude-internals"].add({
+    distance: packet.fusionData.correctedDistance_mm,
+    acceleration: packet.fusionData.rocketAccelZ_mmps2,
+  });
 }
 
 initialize();
