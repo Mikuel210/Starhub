@@ -57,7 +57,6 @@ export function decodePacket(value: DataView): DataPacket {
     controlData: {
       correction_deg: floats(3),
       throttle_01: float(),
-      // p, i, d, r (smoothed output), s (setpoint)
       xPid_deg: floats(5),
       yPid_deg: floats(5),
       altitudePid_mm: floats(5),

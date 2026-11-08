@@ -1,5 +1,7 @@
 import { logPacket } from "./charts.js";
+import { state } from "./countdown.js";
 import { log } from "./logger.js";
+import { recordPacket } from "./recorder.js";
 import { decodePacket } from "./telemetry.js";
 
 // Packet type
@@ -169,6 +171,7 @@ function onCharacteristicChange(e: Event) {
   }
 
   logPacket(lastPacket);
+  if (state.configured && state.started) recordPacket(lastPacket);
 }
 
 function writeCommand(value: string) {

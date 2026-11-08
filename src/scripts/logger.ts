@@ -1,4 +1,5 @@
 import { state, pad, formatCountdown } from "./countdown.js";
+import { recordLog } from "./recorder.js";
 
 // Log function
 const logP = document.getElementById("p-log") as HTMLParagraphElement;
@@ -17,9 +18,13 @@ function log(value: unknown) {
   const time = formatTime();
   const { clock, ms } = formatCountdown();
 
-  logP.innerHTML += `[${time}`;
-  if (state.configured && state.started) logP.innerHTML += ` ${clock}.${ms}`;
-  logP.innerHTML += `] ${value}<br/>`;
+  let log = "";
+  log += `[${time}`;
+  if (state.configured && state.started) log += ` ${clock}.${ms}`;
+  log += `] ${value}`;
+
+  logP.innerHTML += `${log}<br/>`;
+  recordLog(log);
 }
 
 // Exports

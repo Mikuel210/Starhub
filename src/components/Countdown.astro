@@ -7,6 +7,10 @@ import { Icon } from "astro-icon/components";
         <Icon name="mdi:cog-outline" />
     </button>
 
+    <a id="a-download" class="disabled">
+        <Icon name="mdi:download-box" />
+    </a>
+
     <h2 id="h2-mission">Mission Name</h2>
     <h2 id="h2-countdown">T-00:00:00</h2>
     <p id="p-milliseconds">000</p>
@@ -24,11 +28,10 @@ import { Icon } from "astro-icon/components";
         justify-content: center;
         padding: 20px;
 
-        > #button-countdown-config {
+        #button-countdown-config,
+        #a-download {
             display: block;
             position: absolute;
-            top: 15px;
-            right: 15px;
             border: none;
             margin: 0;
             padding: 0;
@@ -37,6 +40,25 @@ import { Icon } from "astro-icon/components";
             > [data-icon] {
                 font-size: 25px;
                 color: white;
+            }
+        }
+
+        #button-countdown-config {
+            top: 15px;
+            right: 15px;
+        }
+
+        #a-download {
+            top: 15px;
+            left: 15px;
+        }
+
+        #a-download.disabled {
+            pointer-events: none;
+            cursor: default;
+
+            > [data-icon] {
+                color: grey;
             }
         }
 
@@ -71,6 +93,7 @@ import { Icon } from "astro-icon/components";
 <script>
     import { state, startupMillis, getT, formatCountdown, setState } from "../scripts/countdown";
     import { connected, lastPacket, writeCommand } from "../scripts/connection";
+    import { prepareDownload, configureMission } from "../scripts/recorder";
     import { log } from "../scripts/logger";
 
     // Countdown configuration
@@ -114,6 +137,7 @@ import { Icon } from "astro-icon/components";
         });
 
         missionH2.innerHTML = missionName;
+        configureMission(missionName);
         log(`Mission configured: ${missionName}`);
     });
 
@@ -181,6 +205,7 @@ import { Icon } from "astro-icon/components";
 
         log("Countdown stopped");
         setState({ configured: false });
+        prepareDownload();
         missionH2.innerHTML = "Mission Name";
     });
 
